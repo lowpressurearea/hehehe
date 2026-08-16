@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Our Date, Mapped Out</title>
+<title>Term-End Celebration — Mapped Out</title>
+<link rel="icon" type="image/x-icon" href="/ico.jpg">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap');
 
@@ -340,8 +341,8 @@
 
   <header>
     <div class="eyebrow">Belair → back to Belair</div>
-    <h1>An itinerary, for you</h1>
-    <p class="sub">Three routes, one afternoon out. Pick a date, pick a place, tap each stop as you go.</p>
+    <h1>Term-End Celebration</h1>
+    <p class="sub">I'm on break, you're still grinding — so let's steal an afternoon anyway. Pick a date, pick a place, tap each stop as you go.</p>
     <div class="theme-deco" id="themeDeco"></div>
   </header>
 
@@ -354,7 +355,7 @@
           <div class="smart-row"><span class="smart-letter">S</span><span><strong>Specific</strong> — three named lunch-then-dessert routes, each with a fixed sequence of stops rather than a vague "explore the city" plan.</span></div>
           <div class="smart-row"><span class="smart-letter">M</span><span><strong>Measurable</strong> — every leg has a distance, an estimated fare or bill, and a checkbox to mark progress in real time.</span></div>
           <div class="smart-row"><span class="smart-letter">A</span><span><strong>Achievable</strong> — built around transit that actually runs on the route (bus, LRT, P2P, Grab) and normal opening hours, not a stretch itinerary.</span></div>
-          <div class="smart-row"><span class="smart-letter">R</span><span><strong>Relevant</strong> — all three stay within lunch + dessert/coffee + optional stroll, matching what was actually asked for.</span></div>
+          <div class="smart-row"><span class="smart-letter">R</span><span><strong>Relevant</strong> — I'm on term break, but you're not, so this is built around a long weekend that actually fits your school schedule.</span></div>
           <div class="smart-row"><span class="smart-letter">T</span><span><strong>Time-bound</strong> — locked to a 9 AM ETD and an 8–9 PM return, across the specific long-weekend dates offered (Aug 21–22 or 29–31).</span></div>
         </div>
       </div>
@@ -746,7 +747,7 @@
   <div class="modal-box">
     <div class="modal-title">Before you dive in</div>
     <div class="modal-sub">Pop in your email so Lance knows you've opened this.</div>
-    <input type="email" id="gateEmail" placeholder="you@email.com" style="width:100%;box-sizing:border-box;padding:11px 14px;border-radius:100px;border:1px solid var(--line);font-family:'IBM Plex Mono',monospace;font-size:13px;margin-bottom:14px;background:var(--paper);color:var(--ink);" />
+    <input type="email" id="gateEmail" placeholder="rgbferrer@gmail.com" style="width:100%;box-sizing:border-box;padding:11px 14px;border-radius:100px;border:1px solid var(--line);font-family:'IBM Plex Mono',monospace;font-size:13px;margin-bottom:14px;background:var(--paper);color:var(--ink);" />
     <div class="modal-actions">
       <button type="button" class="modal-confirm" id="gateContinue" style="flex:1;">Continue</button>
     </div>
@@ -890,17 +891,59 @@
   modalCancel.addEventListener('click', ()=> modal.classList.remove('open'));
   modal.addEventListener('click', (e)=>{ if(e.target === modal) modal.classList.remove('open'); });
 
+  function addDaysToIso(iso, days){
+    const y = +iso.slice(0,4), m = +iso.slice(4,6)-1, d = +iso.slice(6,8);
+    const dt = new Date(Date.UTC(y, m, d));
+    dt.setUTCDate(dt.getUTCDate() + days);
+    return dt.toISOString().slice(0,10).replace(/-/g,'');
+  }
+
+  function downloadIcsWithReminders(iso, label, location){
+    const dayBefore = addDaysToIso(iso, -1);
+    const dayAfter = addDaysToIso(iso, 1);
+    const uid = 'termend-' + iso + '-' + Date.now() + '@dateitinerary';
+    const ics = [
+      'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Term-End Celebration//EN',
+      'BEGIN:VEVENT',
+      'UID:' + uid,
+      'DTSTAMP:' + new Date().toISOString().replace(/[-:]/g,'').split('.')[0] + 'Z',
+      'DTSTART;VALUE=DATE:' + iso,
+      'DTEND;VALUE=DATE:' + dayAfter,
+      'SUMMARY:Lance\'s Term-End Celebration',
+      'LOCATION:' + location,
+      'DESCRIPTION:' + label + ' itinerary. ETD 9:00 AM from Belair\\, home by 8–9 PM.',
+      'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:Reminder',
+      'TRIGGER;VALUE=DATE-TIME:' + dayBefore + 'T010000Z', // 9:00 AM PHT day before
+      'END:VALARM',
+      'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:Reminder',
+      'TRIGGER;VALUE=DATE-TIME:' + dayBefore + 'T080000Z', // 4:00 PM PHT day before
+      'END:VALARM',
+      'END:VEVENT','END:VCALENDAR'
+    ].join('\r\n');
+    const blob = new Blob([ics], {type: 'text/calendar'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'term-end-celebration.ics';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   modalConfirm.addEventListener('click', async ()=>{
     if(!pendingRoute || !pendingDate) return;
     modalConfirm.disabled = true;
     modalConfirm.textContent = 'Saving…';
 
-    // 1) open a pre-filled Google Calendar event — she still taps Save on Google's own page
-    const calTitle = `Date: ${pendingLabel}`;
+    // 1) open a pre-filled, all-day Google Calendar event — she still taps Save on Google's own page
+    const calTitle = `Lance's Term-End Celebration`;
     const calDetails = `Itinerary: ${pendingLabel}. ETD 9:00 AM from Belair, home by 8–9 PM. Full details in the date itinerary site.`;
     const calLocation = 'Laguna Bel Air 1, Santa Rosa, Laguna';
-    const calUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(calTitle)}&dates=${pendingIso}T090000/${pendingIso}T210000&details=${encodeURIComponent(calDetails)}&location=${encodeURIComponent(calLocation)}&ctz=Asia/Manila`;
+    const calEndIso = addDaysToIso(pendingIso, 1);
+    const calUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(calTitle)}&dates=${pendingIso}/${calEndIso}&details=${encodeURIComponent(calDetails)}&location=${encodeURIComponent(calLocation)}`;
     window.open(calUrl, '_blank');
+
+    // 1b) Google's quick-add link can't carry custom reminders, so also hand her a
+    // downloadable .ics with two alarms (9 AM and 4 PM the day before), importable into any calendar app.
+    downloadIcsWithReminders(pendingIso, pendingLabel, calLocation);
 
     // 2) notify Lance via a pre-filled email
     const subject = `Date pick: ${pendingLabel} — ${pendingDate}`;
