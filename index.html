@@ -730,11 +730,12 @@
     <div class="modal-title" id="modalTitle">When would you like to go?</div>
     <div class="modal-sub" id="modalSub">Pick a date for this itinerary.</div>
     <div class="datebar" id="modalDates">
-      <div class="datebtn" data-date="Fri, Aug 21" data-iso="20260821">Fri, Aug 21</div>
-      <div class="datebtn" data-date="Sat, Aug 22" data-iso="20260822">Sat, Aug 22</div>
-      <div class="datebtn" data-date="Sat, Aug 29" data-iso="20260829">Sat, Aug 29</div>
-      <div class="datebtn" data-date="Sun, Aug 30" data-iso="20260830">Sun, Aug 30</div>
-      <div class="datebtn" data-date="Mon, Aug 31" data-iso="20260831">Mon, Aug 31</div>
+      <div class="datebtn" data-date="Fri, Aug 21" data-iso="20260821" data-eventlink="https://calendar.app.google/kL7AvkL5aHM4zagD7">Fri, Aug 21</div>
+      <div class="datebtn" data-date="Sat, Aug 22" data-iso="20260822" data-eventlink="https://calendar.app.google/ARX7ASYomi1Cd2597">Sat, Aug 22</div>
+      <div class="datebtn" data-date="Sun, Aug 23" data-iso="20260823" data-eventlink="https://calendar.app.google/6vKfqFry6YzdbQZ87">Sun, Aug 23</div>
+      <div class="datebtn" data-date="Sat, Aug 29" data-iso="20260829" data-eventlink="https://calendar.app.google/J5kZhXaWopL13iWQ7">Sat, Aug 29</div>
+      <div class="datebtn" data-date="Sun, Aug 30" data-iso="20260830" data-eventlink="https://calendar.app.google/p3YEQjCDbm1YzWjn9">Sun, Aug 30</div>
+      <div class="datebtn" data-date="Mon, Aug 31" data-iso="20260831" data-eventlink="https://calendar.app.google/gRDfJowc8Pj3qEwr7">Mon, Aug 31</div>
     </div>
     <div class="modal-actions">
       <button type="button" class="modal-cancel" id="modalCancel">Cancel</button>
@@ -757,7 +758,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
-  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyB_wWqKrtPD84se7AehaicgKDz2hjwg7d0",
@@ -770,6 +771,19 @@
   };
   const firebaseApp = initializeApp(firebaseConfig);
   const db = getFirestore(firebaseApp);
+
+  // cookie helpers (used instead of localStorage) — 180-day expiry, same-device only
+  function setCookie(name, value, days = 180){
+    const expires = new Date(Date.now() + days*24*60*60*1000).toUTCString();
+    document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+  }
+  function getCookie(name){
+    const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+    return match ? decodeURIComponent(match[1]) : null;
+  }
+  function deleteCookie(name){
+    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+  }
 
   async function fetchLockForEmail(email){
     try{
@@ -789,24 +803,46 @@
     }
   }
 
+  async function deleteLockForEmail(email){
+    try{
+      await deleteDoc(doc(db, 'itineraryPicks', email));
+    }catch(err){
+      console.error('Firestore delete failed', err);
+    }
+  }
+
+  // hidden admin override — visit the page with ?resetlock=EMAIL to clear that email's
+  // pick from Firestore + this device's cookies. Not exposed in any visible UI.
+  (function checkAdminReset(){
+    const params = new URLSearchParams(window.location.search);
+    const target = params.get('resetlock');
+    if(!target) return;
+    deleteLockForEmail(target).then(()=>{
+      if(getCookie('dateItinerary_email') === target){
+        deleteCookie('dateItinerary_lock');
+      }
+      alert(`Lock cleared for ${target}. Reload the page (without ?resetlock=...) to verify.`);
+    });
+  })();
+
   // "Select this itinerary" → date popup → confirm sends an email notification
   const modal = document.getElementById('dateModal');
   const modalSub = document.getElementById('modalSub');
   const modalDates = document.getElementById('modalDates');
   const modalConfirm = document.getElementById('modalConfirm');
   const modalCancel = document.getElementById('modalCancel');
-  let pendingRoute = null, pendingLabel = null, pendingDate = null, pendingIso = null;
+  let pendingRoute = null, pendingLabel = null, pendingDate = null, pendingIso = null, pendingEventLink = null;
   let visitorEmail = '';
 
   // email gate — shown on load, not real auth, just captures an email for the notification.
-  // Skipped on repeat visits from the same device/browser via localStorage, and used to
+  // Skipped on repeat visits from the same device/browser via a cookie, and used to
   // check Firestore for a lock made from any other device under the same email.
   const emailGate = document.getElementById('emailGate');
   const gateEmail = document.getElementById('gateEmail');
   const gateContinue = document.getElementById('gateContinue');
   const gateError = document.getElementById('gateError');
 
-  // itinerary lock — once confirmed, saved to Firestore (cross-device) + localStorage (fast local cache)
+  // itinerary lock — once confirmed, saved to Firestore (cross-device) + a cookie (fast local cache)
   const lockBanner = document.getElementById('lockBanner');
   function applyLock(route, label, date){
     lockBanner.style.display = 'block';
@@ -832,22 +868,22 @@
     document.body.classList.add('theme-' + route);
     setDeco(route);
     updateProgress();
-    localStorage.setItem('dateItinerary_lock', JSON.stringify({route, label, date}));
+    setCookie('dateItinerary_lock', JSON.stringify({route, label, date}));
   }
 
   async function checkLockForCurrentEmail(){
     if(!visitorEmail) return;
-    // Firestore is the source of truth (works across devices); localStorage is just a fast fallback
+    // Firestore is the source of truth (works across devices); the cookie is just a fast fallback
     const remote = await fetchLockForEmail(visitorEmail);
     if(remote){
       applyLock(remote.route, remote.label, remote.date);
       return;
     }
-    const savedLock = JSON.parse(localStorage.getItem('dateItinerary_lock') || 'null');
+    const savedLock = JSON.parse(getCookie('dateItinerary_lock') || 'null');
     if(savedLock) applyLock(savedLock.route, savedLock.label, savedLock.date);
   }
 
-  const savedEmail = localStorage.getItem('dateItinerary_email');
+  const savedEmail = getCookie('dateItinerary_email');
   if(savedEmail){
     visitorEmail = savedEmail;
     emailGate.classList.remove('open');
@@ -859,14 +895,14 @@
     const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
     if(!valid){ gateError.style.display = 'block'; return; }
     visitorEmail = val;
-    localStorage.setItem('dateItinerary_email', val);
+    setCookie('dateItinerary_email', val);
     emailGate.classList.remove('open');
     await checkLockForCurrentEmail();
   });
 
   document.querySelectorAll('.select-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
-      if(localStorage.getItem('dateItinerary_lock') || btn.disabled) return; // already locked, ignore
+      if(getCookie('dateItinerary_lock') || btn.disabled) return; // already locked, ignore
       pendingRoute = btn.dataset.selectRoute;
       pendingLabel = btn.dataset.routeLabel;
       pendingDate = null;
@@ -884,6 +920,7 @@
       d.classList.add('active');
       pendingDate = d.dataset.date;
       pendingIso = d.dataset.iso;
+      pendingEventLink = d.dataset.eventlink;
       modalConfirm.disabled = false;
     });
   });
@@ -911,7 +948,9 @@
       'DTEND;VALUE=DATE:' + dayAfter,
       'SUMMARY:Lance\'s Term-End Celebration',
       'LOCATION:' + location,
-      'DESCRIPTION:' + label + ' itinerary. ETD 9:00 AM from Belair\\, home by 8–9 PM.',
+      'ORGANIZER;CN=Lance:mailto:lancepascualagustin@gmail.com',
+      'ATTENDEE;CN=Lance;ROLE=REQ-PARTICIPANT:mailto:lancepascualagustin@gmail.com',
+      'DESCRIPTION:' + label + ' itinerary. ETD 9:00 AM from Belair\\, home by 8–9 PM. Full details: https://lowpressurearea.github.io/hehehe/',
       'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:Reminder',
       'TRIGGER;VALUE=DATE-TIME:' + dayBefore + 'T010000Z', // 9:00 AM PHT day before
       'END:VALARM',
@@ -933,25 +972,23 @@
     modalConfirm.disabled = true;
     modalConfirm.textContent = 'Saving…';
 
-    // 1) open a pre-filled, all-day Google Calendar event — she still taps Save on Google's own page
-    const calTitle = `Lance's Term-End Celebration`;
-    const calDetails = `Itinerary: ${pendingLabel}. ETD 9:00 AM from Belair, home by 8–9 PM. Full details in the date itinerary site.`;
+    // 1) open Lance's pre-created event for this date — she RSVPs to an event he already
+    // owns/organized, instead of a fresh one being generated under her account.
+    const calDetails = `Itinerary: ${pendingLabel}. ETD 9:00 AM from Belair, home by 8–9 PM. Full details: https://lowpressurearea.github.io/hehehe/`;
     const calLocation = 'Laguna Bel Air 1, Santa Rosa, Laguna';
-    const calEndIso = addDaysToIso(pendingIso, 1);
-    const calUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(calTitle)}&dates=${pendingIso}/${calEndIso}&details=${encodeURIComponent(calDetails)}&location=${encodeURIComponent(calLocation)}`;
-    window.open(calUrl, '_blank');
+    if(pendingEventLink) window.open(pendingEventLink, '_blank');
 
-    // 1b) Google's quick-add link can't carry custom reminders, so also hand her a
-    // downloadable .ics with two alarms (9 AM and 4 PM the day before), importable into any calendar app.
+    // 1b) Google's pre-created event doesn't carry the custom reminders she needs, so also
+    // hand her a downloadable .ics with two alarms (9 AM and 4 PM the day before).
     downloadIcsWithReminders(pendingIso, pendingLabel, calLocation);
 
-    // 2) notify Lance via a pre-filled email
+    // 2) notify Lance via a pre-filled Gmail compose window (not the native Mail app)
     const subject = `Date pick: ${pendingLabel} — ${pendingDate}`;
     const body = `Rissa picked the ${pendingLabel} itinerary for ${pendingDate}.${visitorEmail ? '\nHer email: ' + visitorEmail : ''}`;
-    const mailto = `mailto:lancepascualagustin@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.location.href = mailto;
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent('lancepascualagustin@gmail.com')}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(gmailUrl, '_blank');
 
-    // 3) lock it in — Firestore first (so it follows her email to any device), localStorage as fast cache
+    // 3) lock it in — Firestore first (so it follows her email to any device), cookie as fast cache
     if(visitorEmail){
       await saveLockForEmail(visitorEmail, pendingRoute, pendingLabel, pendingDate);
     }
