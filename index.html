@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Term-End Celebration — Mapped Out</title>
-<link rel="icon" type="image/x-icon" href="/ico.ico">
+<title>Lance's Term-End Celebration</title>
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap');
 
@@ -95,7 +95,6 @@
   .sub{color:#5b5347;font-size:14.5px;max-width:460px;margin:0 auto;}
 
   /* select-itinerary button */
-  .select-btn-wrap{text-align:center;margin:14px 0 4px;}
   .select-btn{
     font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;
     background:var(--teal);color:#fff;border:none;border-radius:100px;
@@ -260,6 +259,26 @@
   .leg-map-wrap{margin-top:8px;}
   .leg-map-wrap iframe{width:100%;height:200px;border:0;border-radius:8px;display:block;}
 
+  .optional-suggestion{
+    margin-top:10px;border:1.5px solid #e0a83a;border-radius:10px;overflow:hidden;
+    background:rgba(224,168,58,.08);
+  }
+  .optional-suggestion summary{
+    cursor:pointer;padding:10px 12px;font-family:'IBM Plex Mono',monospace;font-size:12px;
+    color:#8a5a10;list-style:none;display:flex;justify-content:space-between;align-items:center;
+    gap:8px;font-weight:500;
+  }
+  body.theme-pobla .optional-suggestion summary{color:#f0b04a;}
+  .optional-badge{
+    font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+    background:#e0a83a;color:#fff;padding:2px 7px;border-radius:100px;flex:none;
+  }
+  .optional-suggestion summary::-webkit-details-marker{display:none;}
+  .optional-suggestion summary::after{content:'▾';transition:.2s;margin-left:auto;}
+  .optional-suggestion[open] summary::after{transform:rotate(180deg);}
+  .optional-suggestion-body{padding:0 12px 12px;font-size:12.5px;}
+  .optional-suggestion-body .desc{margin-bottom:6px;}
+
   .ig-embed-wrap{margin-top:10px;overflow:hidden;border-radius:10px;max-width:100%;}
   .ig-embed-wrap iframe{width:100% !important;min-width:0 !important;}
 
@@ -285,6 +304,32 @@
 
   /* header decoration per theme */
   .theme-deco{height:26px;margin:14px auto 0;max-width:280px;opacity:.85;}
+  .budget-note{
+    display:block;width:fit-content;margin:0 auto 12px;padding:8px 16px;
+    background:var(--gold-light);color:#7a4f14;border-radius:100px;
+    font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:center;
+  }
+  body.theme-pobla .budget-note{background:var(--stub);color:var(--gold);}
+
+  /* sticky floating select CTA — follows scroll, always matches the active route */
+  .sticky-cta{
+    position:fixed;left:0;right:0;bottom:0;z-index:60;
+    display:flex;justify-content:center;padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+    background:var(--paper2);border-top:1px solid var(--line);
+    box-shadow:0 -6px 24px rgba(0,0,0,.12);
+    transform:translateY(0);transition:transform .3s ease, background .3s ease;
+  }
+  .sticky-cta.hidden{transform:translateY(110%);}
+  .sticky-cta-btn{
+    width:100%;max-width:420px;font-family:'IBM Plex Mono',monospace;font-size:13.5px;
+    font-weight:500;padding:13px 20px;border-radius:100px;border:none;cursor:pointer;
+    background:var(--teal);color:#fff;transition:opacity .15s, background .3s ease;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .sticky-cta-btn:active{opacity:.85;}
+  .sticky-cta-btn:disabled{background:#1e6b3a;cursor:default;opacity:1;}
+  body.theme-pobla .sticky-cta-btn:disabled{background:#173226;color:#4fd07a;}
+  body{padding-bottom:92px;}
 
   /* knowledge used panel */
   .knowledge{
@@ -340,9 +385,9 @@
 <div class="wrap">
 
   <header>
-    <div class="eyebrow">Belair → back to Belair</div>
-    <h1>Term-End Celebration</h1>
-    <p class="sub">I'm on break, you're still grinding — so let's steal an afternoon anyway. Pick a date, pick a place, tap each stop as you go.</p>
+    <div class="eyebrow">Final Term Escapade</div>
+    <h1>Lance's Term-End Celebration</h1>
+    <p class="sub">Tara na bebe q pls hehehe mwamwa</p>
     <div class="theme-deco" id="themeDeco"></div>
   </header>
 
@@ -399,7 +444,6 @@
         <div class="time">9:00 AM</div>
         <div class="title">Leave Belair</div>
         <div class="desc">Tricycle to the terminal.</div>
-        <div class="chips"><span class="chip cost">₱25 · tricycle</span></div>
       </div>
     </div>
 
@@ -409,7 +453,7 @@
         <div class="time">↳ transit</div>
         <div class="title">Bus, Belair → BBL Transport Terminal, Pasay</div>
         <div class="desc">Direct bus from Santa Rosa into Pasay.</div>
-        <div class="chips"><span class="chip leg"></span><span class="chip cost">₱102 · bus fare</span></div>
+        <div class="chips"><span class="chip leg"></span></div>
       </div>
     </div>
 
@@ -419,7 +463,7 @@
         <div class="time">↳ transit</div>
         <div class="title">LRT / jeep, BBL Pasay → Binondo</div>
         <div class="desc">Onward from the Pasay terminal to Ilang-Ilang St.</div>
-        <div class="chips"><span class="chip leg"></span><span class="chip cost">₱30 est. · LRT or jeep</span></div>
+        <div class="chips"><span class="chip leg"></span></div>
       </div>
     </div>
 
@@ -429,7 +473,7 @@
         <div class="time">~11:30 AM</div>
         <div class="title">Lunch at Ilang Ilang Restaurant</div>
         <div class="desc">A Binondo institution — settle in, no rush.</div>
-        <div class="chips"><span class="chip leg"></span><span class="chip cost">₱450 est. · per person</span></div>
+        <div class="chips"><span class="chip leg"></span></div>
         <div class="placecard">
           <div class="row1">
             <span class="rating">★ 3.9 · 211 reviews</span>
@@ -450,7 +494,7 @@
         <div class="time">~1:00 PM</div>
         <div class="title">Coffee and dessert at Beanstro</div>
         <div class="desc">Slow down over something sweet.</div>
-        <div class="chips"><span class="chip leg"></span><span class="chip cost">₱350 est. · per person</span></div>
+        <div class="chips"><span class="chip leg"></span></div>
         <div class="placecard">
           <div class="row1">
             <span class="rating">★ 4.3 · 336 reviews</span>
@@ -482,13 +526,10 @@
         <div class="time">↳ transit home</div>
         <div class="title">Jeep/LRT to Pasay, bus to Santa Rosa, tricycle home</div>
         <div class="desc">Built-in buffer for evening traffic.</div>
-        <div class="chips"><span class="chip leg"></span><span class="chip cost">₱157 · jeep/LRT + bus + tricycle</span></div>
+        <div class="chips"><span class="chip leg"></span></div>
       </div>
     </div>
-
-    <div class="route-total" data-total-for="binondo"></div>
     <div class="home-badge">home in Laguna by 8–9 PM</div>
-    <div class="select-btn-wrap"><button type="button" class="select-btn" data-select-route="binondo" data-route-label="Binondo">Select this itinerary</button></div>
   </div>
 
   <!-- GH MALL -->
@@ -501,7 +542,6 @@
         <div class="time">9:00 AM</div>
         <div class="title">Leave Belair</div>
         <div class="desc">Tricycle to the terminal.</div>
-        <div class="chips"><span class="chip cost">₱25 · tricycle</span></div>
       </div>
     </div>
 
@@ -511,7 +551,7 @@
         <div class="time">↳ transit</div>
         <div class="title">P2P, Belair → One Ayala Terminal</div>
         <div class="desc">Or the regular bus from Balibago (~₱102) if the P2P isn't running.</div>
-        <div class="chips"><span class="chip leg"></span><span class="chip cost">₱200+ · P2P fare</span></div>
+        <div class="chips"><span class="chip leg"></span></div>
       </div>
     </div>
 
@@ -521,7 +561,7 @@
         <div class="time">↳ transit</div>
         <div class="title">Grab, One Ayala → Greenhills</div>
         <div class="desc">Short hop across town.</div>
-        <div class="chips"><span class="chip leg"></span><span class="chip cost">₱150 est. · Grab</span></div>
+        <div class="chips"><span class="chip leg"></span></div>
       </div>
     </div>
 
@@ -531,7 +571,7 @@
         <div class="time">~11:30 AM</div>
         <div class="title">Lunch at Ono Poke Bowl</div>
         <div class="desc">Light, fresh start to the afternoon.</div>
-        <div class="chips"><span class="chip leg"></span><span class="chip cost">₱450 est. · per person</span></div>
+        <div class="chips"><span class="chip leg"></span></div>
         <div class="placecard">
           <div class="row1">
             <span class="rating">★ 3.9 · 18 reviews</span>
@@ -549,7 +589,7 @@
       <div class="stub-body">
         <div class="time">~1:00 PM</div>
         <div class="title">Dessert at Chebi Webbi</div>
-        <div class="chips"><span class="chip leg"></span><span class="chip cost">₱200 est. · per person</span></div>
+        <div class="chips"><span class="chip leg"></span></div>
         <div class="placecard">
           <div class="row1">
             <span class="rating">★ 4.6 · 188 reviews</span>
@@ -570,7 +610,7 @@
       <div class="stub-body">
         <div class="time">~1:45 PM</div>
         <div class="title">Coffee at Hoshino Coffee</div>
-        <div class="chips"><span class="chip leg"></span><span class="chip cost">₱250 est. · per person</span></div>
+        <div class="chips"><span class="chip leg"></span></div>
         <div class="placecard">
           <div class="row1">
             <span class="rating">★ 4.3 · 820 reviews</span>
@@ -598,7 +638,7 @@
       <div class="stub-body">
         <div class="time">↳ transit</div>
         <div class="title">Grab, Greenhills → One Ayala</div>
-        <div class="chips"><span class="chip leg"></span><span class="chip cost">₱150 est. · Grab</span></div>
+        <div class="chips"><span class="chip leg"></span></div>
       </div>
     </div>
 
@@ -607,13 +647,10 @@
       <div class="stub-body">
         <div class="time">↳ transit home</div>
         <div class="title">P2P, One Ayala → Belair, then tricycle home</div>
-        <div class="chips"><span class="chip leg"></span><span class="chip cost">₱225 · P2P + tricycle</span></div>
+        <div class="chips"><span class="chip leg"></span></div>
       </div>
     </div>
-
-    <div class="route-total" data-total-for="gh"></div>
     <div class="home-badge">home in Laguna by 8–9 PM</div>
-    <div class="select-btn-wrap"><button type="button" class="select-btn" data-select-route="gh" data-route-label="GH Mall">Select this itinerary</button></div>
   </div>
 
   <!-- POBLACION -->
@@ -626,7 +663,6 @@
         <div class="time">9:00 AM</div>
         <div class="title">Leave Belair</div>
         <div class="desc">Tricycle to the terminal.</div>
-        <div class="chips"><span class="chip cost">₱25 · tricycle</span></div>
       </div>
     </div>
 
@@ -636,7 +672,7 @@
         <div class="time">↳ transit</div>
         <div class="title">P2P, Belair → One Ayala Terminal</div>
         <div class="desc">Or the regular bus from Balibago (~₱102) if the P2P isn't running.</div>
-        <div class="chips"><span class="chip leg"></span><span class="chip cost">₱200+ · P2P fare</span></div>
+        <div class="chips"><span class="chip leg"></span></div>
       </div>
     </div>
 
@@ -645,7 +681,7 @@
       <div class="stub-body">
         <div class="time">↳ transit</div>
         <div class="title">Grab, One Ayala → Poblacion</div>
-        <div class="chips"><span class="chip leg"></span><span class="chip cost">₱150 est. · Grab</span></div>
+        <div class="chips"><span class="chip leg"></span></div>
       </div>
     </div>
 
@@ -655,7 +691,7 @@
         <div class="time">~11:30 AM</div>
         <div class="title">Lunch at Izakaya Tori-Ichizu</div>
         <div class="desc">Skewers and small plates, unhurried.</div>
-        <div class="chips"><span class="chip leg"></span><span class="chip cost">₱600 est. · per person</span></div>
+        <div class="chips"><span class="chip leg"></span></div>
         <div class="placecard">
           <div class="row1">
             <span class="rating">★ 4.6 · 1,351 reviews</span>
@@ -676,7 +712,7 @@
       <div class="stub-body">
         <div class="time">~1:00 PM</div>
         <div class="title">Dessert and coffee at Saglit by Flower Ranch Cafe</div>
-        <div class="chips"><span class="chip leg"></span><span class="chip cost">₱300 est. · per person</span></div>
+        <div class="chips"><span class="chip leg"></span></div>
         <div class="placecard">
           <div class="row1">
             <span class="rating">★ 4.7 · 193 reviews</span>
@@ -693,9 +729,21 @@
       <div class="check"></div>
       <div class="stub-body">
         <div class="time">~2:00 PM</div>
-        <div class="title">Stroll Pobla, and Power Plant Mall if time allows</div>
+        <div class="title">Stroll around Poblacion</div>
         <div class="desc">Flexible — let the day set the pace.</div>
         <div class="chips"><span class="chip leg"></span></div>
+        <details class="optional-suggestion">
+          <summary><span class="optional-badge">Optional</span> 💡 Power Plant Mall nearby</summary>
+          <div class="optional-suggestion-body">
+            <div class="desc">Just a suggestion, not part of the set plan — a short walk from Saglit if you want a quieter, more upscale stroll to round out the afternoon.</div>
+            <div class="chips">
+              <span class="chip">~0.4 km from Saglit</span>
+              <a class="chip live-dir" href="https://www.google.com/maps/dir/?api=1&origin=14.563338,121.032933&destination=14.5646875,121.0364375&travelmode=walking" target="_blank">Live directions ↗</a>
+              <button type="button" class="chip show-map-btn" data-target="p5-powerplant-map">Show map</button>
+            </div>
+            <div class="leg-map-wrap" id="p5-powerplant-map" style="display:none;" data-origin="14.563338,121.032933" data-dest="14.5646875,121.0364375"></div>
+          </div>
+        </details>
       </div>
     </div>
 
@@ -704,7 +752,7 @@
       <div class="stub-body">
         <div class="time">↳ transit</div>
         <div class="title">Grab, Poblacion → One Ayala</div>
-        <div class="chips"><span class="chip leg"></span><span class="chip cost">₱150 est. · Grab</span></div>
+        <div class="chips"><span class="chip leg"></span></div>
       </div>
     </div>
 
@@ -713,15 +761,13 @@
       <div class="stub-body">
         <div class="time">↳ transit home</div>
         <div class="title">P2P, One Ayala → Belair, then tricycle home</div>
-        <div class="chips"><span class="chip leg"></span><span class="chip cost">₱225 · P2P + tricycle</span></div>
+        <div class="chips"><span class="chip leg"></span></div>
       </div>
     </div>
-
-    <div class="route-total" data-total-for="pobla"></div>
     <div class="home-badge">home in Laguna by 8–9 PM</div>
-    <div class="select-btn-wrap"><button type="button" class="select-btn" data-select-route="pobla" data-route-label="Poblacion">Select this itinerary</button></div>
   </div>
 
+  <div class="budget-note">Expect around ₱1,500++/person on average across the three routes</div>
   <footer>tap a stop to mark it done · distances and costs are estimates, not live quotes</footer>
 </div>
 
@@ -869,6 +915,7 @@
     setDeco(route);
     updateProgress();
     setCookie('dateItinerary_lock', JSON.stringify({route, label, date}));
+    if(typeof updateStickyCta === 'function') updateStickyCta();
   }
 
   async function checkLockForCurrentEmail(){
@@ -900,19 +947,44 @@
     await checkLockForCurrentEmail();
   });
 
+  function openDateModal(route, label){
+    pendingRoute = route;
+    pendingLabel = label;
+    pendingDate = null;
+    pendingIso = null;
+    pendingEventLink = null;
+    modalSub.textContent = `Pick a date for the ${label} itinerary. Once confirmed, this can't be changed.`;
+    modalDates.querySelectorAll('.datebtn').forEach(d=>d.classList.remove('active'));
+    modalConfirm.disabled = true;
+    modal.classList.add('open');
+  }
+
   document.querySelectorAll('.select-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       if(getCookie('dateItinerary_lock') || btn.disabled) return; // already locked, ignore
-      pendingRoute = btn.dataset.selectRoute;
-      pendingLabel = btn.dataset.routeLabel;
-      pendingDate = null;
-      pendingIso = null;
-      modalSub.textContent = `Pick a date for the ${pendingLabel} itinerary. Once confirmed, this can't be changed.`;
-      modalDates.querySelectorAll('.datebtn').forEach(d=>d.classList.remove('active'));
-      modalConfirm.disabled = true;
-      modal.classList.add('open');
+      openDateModal(btn.dataset.selectRoute, btn.dataset.routeLabel);
     });
   });
+
+  // sticky floating CTA — mirrors whichever route tab is currently active, follows scroll
+  const stickyCtaBtn = document.getElementById('stickyCtaBtn');
+  const routeLabels = { binondo: 'Binondo', gh: 'GH Mall', pobla: 'Poblacion' };
+  let stickyRoute = 'binondo';
+  function updateStickyCta(){
+    if(getCookie('dateItinerary_lock')){
+      const lock = JSON.parse(getCookie('dateItinerary_lock'));
+      stickyCtaBtn.textContent = `✓ Locked in: ${lock.label}, ${lock.date}`;
+      stickyCtaBtn.disabled = true;
+    } else {
+      stickyCtaBtn.textContent = `Select ${routeLabels[stickyRoute]} →`;
+      stickyCtaBtn.disabled = false;
+    }
+  }
+  stickyCtaBtn.addEventListener('click', ()=>{
+    if(getCookie('dateItinerary_lock')) return;
+    openDateModal(stickyRoute, routeLabels[stickyRoute]);
+  });
+  updateStickyCta();
 
   modalDates.querySelectorAll('.datebtn').forEach(d=>{
     d.addEventListener('click', ()=>{
@@ -1016,6 +1088,8 @@
     document.body.classList.add('theme-'+tab.dataset.route);
     setDeco(tab.dataset.route);
     updateProgress();
+    stickyRoute = tab.dataset.route;
+    updateStickyCta();
   }));
 
   // themed header decorations (inline SVG, no external images needed)
@@ -1118,6 +1192,10 @@
     });
   });
 </script>
+<div class="sticky-cta" id="stickyCta">
+  <button type="button" class="sticky-cta-btn" id="stickyCtaBtn">Select this itinerary</button>
+</div>
+
 <script async src="//www.instagram.com/embed.js"></script>
 </body>
 </html>
