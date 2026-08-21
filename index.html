@@ -1418,10 +1418,17 @@
   locationConfirmCancel.addEventListener('click', ()=> locationConfirmModal.classList.remove('open'));
   locationConfirmModal.addEventListener('click', (e)=>{ if(e.target === locationConfirmModal) locationConfirmModal.classList.remove('open'); });
 
-  function writeLocationOnce(lat, lng, accuracy){
+  function writeLocationOnce(lat, lng, accuracy, live){
     const who = normalizeEmail(visitorEmail) || 'unknown';
     setDoc(locationDocRef, {
-      [who]: { lat, lng, accuracy: accuracy ?? null, updatedAt: new Date().toISOString() }
+      [who]: { lat, lng, accuracy: accuracy ?? null, updatedAt: new Date().toISOString(), live: !!live }
+    }, { merge: true }).catch(err=>console.error('Location sync failed', err));
+  }
+
+  function markLocationNotLive(){
+    const who = normalizeEmail(visitorEmail) || 'unknown';
+    setDoc(locationDocRef, {
+      [who]: { live: false }
     }, { merge: true }).catch(err=>console.error('Location sync failed', err));
   }
 
@@ -1429,7 +1436,7 @@
     locationWatchId = navigator.geolocation.watchPosition(
       pos=>{
         const { latitude, longitude, accuracy } = pos.coords;
-        writeLocationOnce(latitude, longitude, accuracy);
+        writeLocationOnce(latitude, longitude, accuracy, true);
       },
       err=>{
         console.error('Geolocation error', err);
@@ -1450,6 +1457,9 @@
       clearTimeout(locationAutoStopTimer);
       locationAutoStopTimer = null;
     }
+    // flip the shared "live" flag off so the display page falls back to
+    // most-recently-updated instead of treating this as still-live
+    markLocationNotLive();
     updateLocationBtnUI();
   }
 
@@ -1459,7 +1469,7 @@
 
     if(selectedDuration === 'instant'){
       // one-time share, doesn't toggle the "sharing" state on
-      writeLocationOnce(previewCoords.lat, previewCoords.lng, null);
+      writeLocationOnce(previewCoords.lat, previewCoords.lng, null, false);
       return;
     }
 
@@ -1479,6 +1489,7 @@
     if(sharingLocation) stopSharingLocation();
     else openLocationConfirmModal();
   });
+
 
   const checklistDocRef = doc(db, 'sharedState', 'checklist');
   let applyingRemoteChecklist = false;
