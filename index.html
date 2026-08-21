@@ -159,6 +159,17 @@
   .modal-cancel{background:var(--paper);color:var(--ink);border:1px solid var(--line);}
   .modal-confirm:disabled{opacity:.4;cursor:not-allowed;}
 
+  .location-preview-map{width:100%;height:160px;border:0;border-radius:10px;display:block;margin-bottom:10px;background:var(--paper);}
+  .location-preview-address{
+    font-size:12.5px;color:#6b6353;line-height:1.5;margin-bottom:16px;
+    display:flex;gap:6px;align-items:flex-start;
+  }
+  .location-preview-address .pin{flex:none;}
+  .location-duration-label{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;
+    letter-spacing:.05em;color:#8a8272;margin-bottom:8px;
+  }
+
   /* tabs */
   .tabs{display:flex;gap:6px;margin-bottom:24px;border-bottom:2px solid var(--line);}
   .tab{
@@ -908,6 +919,28 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="locationConfirmModal">
+  <div class="modal-box">
+    <div class="modal-title">Share your location?</div>
+    <div class="modal-sub">Confirm below before it starts sharing.</div>
+
+    <iframe class="location-preview-map" id="locationPreviewMap" loading="lazy"></iframe>
+    <div class="location-preview-address"><span class="pin">📍</span><span id="locationPreviewAddress">Getting your current location…</span></div>
+
+    <div class="location-duration-label">Share for</div>
+    <div class="datebar" id="locationDurationOptions">
+      <div class="datebtn" data-duration="instant">Just now</div>
+      <div class="datebtn" data-duration="1hour">1 hour</div>
+      <div class="datebtn" data-duration="itinerary">Until itinerary ends</div>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="modal-cancel" id="locationConfirmCancel">Cancel</button>
+      <button type="button" class="modal-confirm" id="locationConfirmShare" disabled>Share my location</button>
+    </div>
+  </div>
+</div>
+
 <div class="letter-overlay" id="letterOverlay">
   <div class="letter-box">
     <button type="button" class="letter-close" id="letterClose">✕</button>
@@ -1285,46 +1318,116 @@
     });
   }
 
-  // live location sharing — opt-in only, toggled by whoever's on this page.
+  // live location sharing — opt-in only, gated behind a confirmation popup that shows
+  // the current pin/address and requires picking a duration before sharing can start.
   // Writes to a shared Firestore doc so the read-only Poblacion page (e.g. for
   // her parents) can show "last known location" without any tracking by default.
   const locationDocRef = doc(db, 'sharedState', 'location');
   const locationToggleBtn = document.getElementById('locationToggleBtn');
   const locationToggleLabel = document.getElementById('locationToggleLabel');
+  const locationConfirmModal = document.getElementById('locationConfirmModal');
+  const locationPreviewMap = document.getElementById('locationPreviewMap');
+  const locationPreviewAddress = document.getElementById('locationPreviewAddress');
+  const locationDurationOptions = document.getElementById('locationDurationOptions');
+  const locationConfirmShare = document.getElementById('locationConfirmShare');
+  const locationConfirmCancel = document.getElementById('locationConfirmCancel');
+
   let locationWatchId = null;
+  let locationAutoStopTimer = null;
   let sharingLocation = false;
+  let previewCoords = null;
+  let selectedDuration = null;
 
   function updateLocationBtnUI(){
     locationToggleBtn.classList.toggle('active', sharingLocation);
     locationToggleLabel.textContent = sharingLocation ? 'Sharing live location…' : 'Share live location';
   }
 
-  function startSharingLocation(){
+  async function reverseGeocode(lat, lng){
+    try{
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=17&addressdetails=1`,
+        { headers: { 'Accept-Language': 'en' } }
+      );
+      if(!res.ok) throw new Error('Reverse geocode request failed');
+      const data = await res.json();
+      return data.display_name || null;
+    }catch(err){
+      console.error('Reverse geocode error', err);
+      return null;
+    }
+  }
+
+  function geoErrorMessage(err){
+    if(err.code === err.PERMISSION_DENIED){
+      return 'Location permission was denied for this site. On iPhone: Settings → Privacy & Security → Location Services → Safari Websites → set to "While Using the App". Then in Safari, tap the "aA" icon in the address bar → Website Settings → Location → Allow, and reload the page.';
+    } else if(err.code === err.POSITION_UNAVAILABLE){
+      return 'Your device couldn\'t determine a location right now — try again in a moment, ideally outdoors or near a window.';
+    } else if(err.code === err.TIMEOUT){
+      return 'Getting your location took too long — try again, ideally with a clearer GPS signal.';
+    }
+    return 'Couldn\'t get your location.';
+  }
+
+  function openLocationConfirmModal(){
     if(!navigator.geolocation){
       alert('Geolocation isn\'t supported on this device/browser.');
       return;
     }
-    sharingLocation = true;
-    updateLocationBtnUI();
-    locationWatchId = navigator.geolocation.watchPosition(
+    previewCoords = null;
+    selectedDuration = null;
+    locationDurationOptions.querySelectorAll('.datebtn').forEach(b=>b.classList.remove('active'));
+    locationConfirmShare.disabled = true;
+    locationPreviewAddress.textContent = 'Getting your current location…';
+    locationPreviewMap.src = '';
+    locationConfirmModal.classList.add('open');
+
+    navigator.geolocation.getCurrentPosition(
       pos=>{
-        const { latitude, longitude, accuracy } = pos.coords;
-        const who = visitorEmail || 'unknown';
-        setDoc(locationDocRef, {
-          [who]: { lat: latitude, lng: longitude, accuracy, updatedAt: new Date().toISOString() }
-        }, { merge: true }).catch(err=>console.error('Location sync failed', err));
+        const { latitude, longitude } = pos.coords;
+        previewCoords = { lat: latitude, lng: longitude };
+        locationPreviewMap.src = `https://maps.google.com/maps?q=${latitude},${longitude}&z=16&output=embed`;
+        locationPreviewAddress.textContent = 'Looking up address…';
+        reverseGeocode(latitude, longitude).then(addr=>{
+          locationPreviewAddress.textContent = addr || `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+        });
       },
       err=>{
         console.error('Geolocation error', err);
-        let msg = 'Couldn\'t get your location.';
-        if(err.code === err.PERMISSION_DENIED){
-          msg = 'Location permission was denied for this site. On iPhone: Settings → Privacy & Security → Location Services → Safari Websites → set to "While Using the App". Then in Safari, tap the "aA" icon in the address bar → Website Settings → Location → Allow, and reload the page.';
-        } else if(err.code === err.POSITION_UNAVAILABLE){
-          msg = 'Your device couldn\'t determine a location right now — try again in a moment, ideally outdoors or near a window.';
-        } else if(err.code === err.TIMEOUT){
-          msg = 'Getting your location took too long — try again, ideally with a clearer GPS signal.';
-        }
-        alert(msg);
+        locationPreviewAddress.textContent = geoErrorMessage(err);
+      },
+      { enableHighAccuracy: true, maximumAge: 20000, timeout: 25000 }
+    );
+  }
+
+  locationDurationOptions.querySelectorAll('.datebtn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      locationDurationOptions.querySelectorAll('.datebtn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedDuration = btn.dataset.duration;
+      locationConfirmShare.disabled = false;
+    });
+  });
+
+  locationConfirmCancel.addEventListener('click', ()=> locationConfirmModal.classList.remove('open'));
+  locationConfirmModal.addEventListener('click', (e)=>{ if(e.target === locationConfirmModal) locationConfirmModal.classList.remove('open'); });
+
+  function writeLocationOnce(lat, lng, accuracy){
+    const who = visitorEmail || 'unknown';
+    setDoc(locationDocRef, {
+      [who]: { lat, lng, accuracy: accuracy ?? null, updatedAt: new Date().toISOString() }
+    }, { merge: true }).catch(err=>console.error('Location sync failed', err));
+  }
+
+  function startWatching(){
+    locationWatchId = navigator.geolocation.watchPosition(
+      pos=>{
+        const { latitude, longitude, accuracy } = pos.coords;
+        writeLocationOnce(latitude, longitude, accuracy);
+      },
+      err=>{
+        console.error('Geolocation error', err);
+        alert(geoErrorMessage(err));
         stopSharingLocation();
       },
       { enableHighAccuracy: true, maximumAge: 20000, timeout: 25000 }
@@ -1337,12 +1440,38 @@
       navigator.geolocation.clearWatch(locationWatchId);
       locationWatchId = null;
     }
+    if(locationAutoStopTimer !== null){
+      clearTimeout(locationAutoStopTimer);
+      locationAutoStopTimer = null;
+    }
     updateLocationBtnUI();
   }
 
+  locationConfirmShare.addEventListener('click', ()=>{
+    if(!selectedDuration || !previewCoords) return;
+    locationConfirmModal.classList.remove('open');
+
+    if(selectedDuration === 'instant'){
+      // one-time share, doesn't toggle the "sharing" state on
+      writeLocationOnce(previewCoords.lat, previewCoords.lng, null);
+      return;
+    }
+
+    sharingLocation = true;
+    updateLocationBtnUI();
+    startWatching();
+
+    if(selectedDuration === '1hour'){
+      locationAutoStopTimer = setTimeout(()=>{
+        stopSharingLocation();
+      }, 60 * 60 * 1000);
+    }
+    // 'itinerary' duration: shares until manually toggled off via the same button
+  });
+
   locationToggleBtn.addEventListener('click', ()=>{
     if(sharingLocation) stopSharingLocation();
-    else startSharingLocation();
+    else openLocationConfirmModal();
   });
 
   const checklistDocRef = doc(db, 'sharedState', 'checklist');
