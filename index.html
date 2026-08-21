@@ -988,6 +988,12 @@
   const firebaseApp = initializeApp(firebaseConfig);
   const db = getFirestore(firebaseApp);
 
+  // normalize emails so the same person always maps to the same Firestore key,
+  // regardless of casing/whitespace typed into the gate
+  function normalizeEmail(email){
+    return (email || '').trim().toLowerCase();
+  }
+
   // cookie helpers (used instead of localStorage) — 180-day expiry, same-device only
   function setCookie(name, value, days = 180){
     const expires = new Date(Date.now() + days*24*60*60*1000).toUTCString();
@@ -1110,7 +1116,7 @@
     if(savedLock) applyLock(savedLock.route, savedLock.label, savedLock.date);
   }
 
-  const savedEmail = getCookie('dateItinerary_email');
+  const savedEmail = normalizeEmail(getCookie('dateItinerary_email'));
   if(savedEmail){
     visitorEmail = savedEmail;
     emailGate.classList.remove('open');
@@ -1118,7 +1124,7 @@
   }
 
   gateContinue.addEventListener('click', async ()=>{
-    const val = gateEmail.value.trim();
+    const val = normalizeEmail(gateEmail.value);
     const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
     if(!valid){ gateError.style.display = 'block'; return; }
     visitorEmail = val;
@@ -1413,7 +1419,7 @@
   locationConfirmModal.addEventListener('click', (e)=>{ if(e.target === locationConfirmModal) locationConfirmModal.classList.remove('open'); });
 
   function writeLocationOnce(lat, lng, accuracy){
-    const who = visitorEmail || 'unknown';
+    const who = normalizeEmail(visitorEmail) || 'unknown';
     setDoc(locationDocRef, {
       [who]: { lat, lng, accuracy: accuracy ?? null, updatedAt: new Date().toISOString() }
     }, { merge: true }).catch(err=>console.error('Location sync failed', err));
