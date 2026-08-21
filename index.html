@@ -113,6 +113,23 @@
   }
   body.theme-pobla .lock-banner{background:#173226;color:#4fd07a;}
 
+  .location-toggle-wrap{
+    max-width:680px;margin:0 auto 18px;display:flex;justify-content:center;
+  }
+  .location-toggle-btn{
+    font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:500;
+    background:var(--paper2);color:var(--teal-dark);border:1px solid var(--line);
+    border-radius:100px;padding:9px 18px;cursor:pointer;display:inline-flex;
+    align-items:center;gap:7px;transition:.15s;
+  }
+  .location-toggle-btn:hover{border-color:var(--teal);}
+  .location-toggle-btn.active{background:var(--teal);color:#fff;border-color:var(--teal);}
+  .location-toggle-btn .dot-live{
+    width:7px;height:7px;border-radius:50%;background:#8a8272;flex:none;
+  }
+  .location-toggle-btn.active .dot-live{background:#fff;animation:dotPulse 1.4s infinite;}
+  @keyframes dotPulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+
   /* modal */
   .modal-overlay{
     display:none;position:fixed;inset:0;background:rgba(20,15,10,.55);
@@ -385,6 +402,46 @@
     transition:width .3s ease, background .3s ease;
   }
 
+  /* the letter — a softer, more intimate overlay than the utilitarian modals.
+     Uses theme variables so it automatically matches Poblacion's dark/neon palette,
+     since that's the only route this can ever trigger from. */
+  .letter-overlay{
+    display:none;position:fixed;inset:0;z-index:200;
+    background:rgba(5,5,8,.8);align-items:center;justify-content:center;padding:20px;
+  }
+  .letter-overlay.open{display:flex;animation:letterFadeIn .5s ease;}
+  @keyframes letterFadeIn{from{opacity:0;}to{opacity:1;}}
+  .letter-box{
+    background:var(--paper2);border-radius:10px;max-width:520px;width:100%;
+    max-height:85vh;overflow-y:auto;padding:44px 38px;
+    box-shadow:0 0 0 1px rgba(47,214,196,.25), 0 0 60px rgba(255,93,162,.18), 0 30px 80px rgba(0,0,0,.6);
+    position:relative;font-family:'Fraunces',serif;
+    animation:letterRise .6s cubic-bezier(.2,.9,.3,1.1);
+    background-image:
+      radial-gradient(circle at 92% 8%, rgba(255,93,162,.08), transparent 40%),
+      radial-gradient(circle at 8% 95%, rgba(47,214,196,.06), transparent 45%);
+  }
+  @keyframes letterRise{
+    from{transform:translateY(24px) scale(.97);opacity:0;}
+    to{transform:translateY(0) scale(1);opacity:1;}
+  }
+  .letter-close{
+    position:sticky;top:0;float:right;margin:-20px -14px 0 0;
+    width:30px;height:30px;border-radius:50%;border:1px solid var(--line);cursor:pointer;
+    background:var(--stub);color:var(--gold);font-size:15px;line-height:28px;text-align:center;
+    font-family:'IBM Plex Mono',monospace;z-index:1;
+  }
+  .letter-body{font-size:16px;line-height:1.85;color:var(--ink);clear:both;}
+  .letter-body p{margin:0 0 18px;}
+  .letter-signoff{
+    font-weight:600;font-size:19px;margin-top:26px;color:var(--gold);
+    text-shadow:0 0 18px rgba(255,93,162,.35);
+  }
+  .letter-heart{
+    text-align:center;font-size:20px;margin-bottom:18px;letter-spacing:6px;color:var(--teal);
+    text-shadow:0 0 12px rgba(47,214,196,.5);
+  }
+
   footer{text-align:center;margin-top:36px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#a49c8c;}
 </style>
 </head>
@@ -438,6 +495,13 @@
   </div>
 
   <div class="lock-banner" id="lockBanner" style="display:none;"></div>
+
+  <div class="location-toggle-wrap">
+    <button type="button" class="location-toggle-btn" id="locationToggleBtn">
+      <span class="dot-live"></span>
+      <span id="locationToggleLabel">Share live location</span>
+    </button>
+  </div>
 
   <div class="progress-track"><div class="progress-fill" id="progFill"></div></div>
 
@@ -672,25 +736,31 @@
 
   <!-- POBLACION -->
   <div class="route" id="route-pobla">
-    <div class="meta"><span>ETD 9:00 AM · Belair</span><span class="tag">6 legs · easy pace</span></div>
+    <div class="meta"><span>ETD 8:30–9:00 AM · Belair</span><span class="tag">6 legs · easy pace</span></div>
 
-    <div class="stub" data-id="p1" data-lat="14.270065" data-lng="121.0714895" data-cost="25">
+    <div class="stub" data-id="p1" data-lat="14.2369253" data-lng="121.05525" data-cost="25">
       <div class="check"></div>
       <div class="stub-body">
-        <div class="time">9:00 AM</div>
+        <div class="time">8:30–9:00 AM</div>
         <div class="title">Leave Belair</div>
-        <div class="desc">Tricycle to the terminal.</div>
-        <div class="chips"><span class="chip cost">₱25 · tricycle</span></div>
+        <div class="desc">Head over to Nuvali Transport Terminal.</div>
+        <div class="chips">
+          <span class="chip cost">₱25 · tricycle</span>
+          <span class="chip">~4.1 km from Belair</span>
+          <a class="chip live-dir" href="https://www.google.com/maps/dir/?api=1&origin=14.270065,121.0714895&destination=14.2369253,121.05525&travelmode=driving" target="_blank">Live directions ↗</a>
+          <button type="button" class="chip show-map-btn" data-target="p1-belair-nuvali-map">Show map</button>
+        </div>
+        <div class="leg-map-wrap" id="p1-belair-nuvali-map" style="display:none;" data-origin="14.270065,121.0714895" data-dest="14.2369253,121.05525"></div>
       </div>
     </div>
 
-    <div class="stub transit" data-id="p1b" data-lat="14.5504567" data-lng="121.02787" data-cost="82">
+    <div class="stub transit" data-id="p1b" data-lat="14.5504567" data-lng="121.02787" data-cost="200">
       <div class="check"></div>
       <div class="stub-body">
-        <div class="time">↳ transit</div>
-        <div class="title">P2P or bus, Belair → One Ayala Terminal</div>
-        <div class="desc">P2P is pricier but more direct; the regular bus from Balibago is the budget option.</div>
-        <div class="chips"><span class="chip leg"></span><span class="chip cost">₱200+ P2P / ₱102 bus (₱82 disc.)</span></div>
+        <div class="time">9:00 AM or 9:40 AM</div>
+        <div class="title">P2P, Nuvali → One Ayala Terminal</div>
+        <div class="desc">Either the 9:00 AM or 9:40 AM P2P trip direct from Nuvali Transport Terminal to One Ayala — whichever fits better.</div>
+        <div class="chips"><span class="chip leg"></span><span class="chip cost">₱200+ · P2P fare</span></div>
       </div>
     </div>
 
@@ -698,7 +768,7 @@
       <div class="check"></div>
       <div class="stub-body">
         <div class="time">↳ transit</div>
-        <div class="title">Grab, One Ayala → Poblacion</div>
+        <div class="title">Grab, One Ayala → Lunch</div>
         <div class="chips"><span class="chip leg"></span><span class="chip cost">₱150 est. · Grab</span></div>
       </div>
     </div>
@@ -753,7 +823,7 @@
         <details class="optional-suggestion">
           <summary><span class="optional-badge">Optional</span> 💡 Power Plant Mall nearby</summary>
           <div class="optional-suggestion-body">
-            <div class="desc">Just a suggestion, not part of the set plan — a short walk from Saglit if you want a quieter, more upscale stroll to round out the afternoon.</div>
+            <div class="desc">Just a suggestion, not part of the set plan — a short walk from Saglit if there's time for a quieter, more upscale stroll to round out the afternoon.</div>
             <div class="chips">
               <span class="chip">~0.4 km from Saglit</span>
               <a class="chip live-dir" href="https://www.google.com/maps/dir/?api=1&origin=14.563338,121.032933&destination=14.5646875,121.0364375&travelmode=walking" target="_blank">Live directions ↗</a>
@@ -771,6 +841,16 @@
         <div class="time">↳ transit</div>
         <div class="title">Grab, Poblacion → One Ayala</div>
         <div class="chips"><span class="chip leg"></span><span class="chip cost">₱150 est. · Grab</span></div>
+        <details class="optional-suggestion">
+          <summary>🍽️ Early Dinner at One Ayala</summary>
+          <div class="optional-suggestion-body">
+            <div class="desc">Since the P2P terminal is right there, an early dinner at One Ayala Mall before heading home.</div>
+            <div class="chips">
+              <a class="maplink" href="https://www.google.com/maps/place/One+Ayala+(Ayala+Malls)/@14.5504545,121.0252502,17z/data=!3m1!4b1!4m6!3m5!1s0x3397c95b0494f8cf:0x38bcb0d8f0bb8b77!8m2!3d14.5504493!4d121.0278251!16s%2Fg%2F11t9cvsdk4" target="_blank">Open in Google Maps ↗</a>
+              <a class="maplink" href="https://www.ayalamalls.com/explore/one-ayala-mall/view-all/dine" target="_blank">Browse dining options ↗</a>
+            </div>
+          </div>
+        </details>
       </div>
     </div>
 
@@ -779,7 +859,7 @@
       <div class="stub-body">
         <div class="time">↳ transit home</div>
         <div class="title">P2P or bus, One Ayala → Belair</div>
-        <div class="desc">P2P drops off directly at Belair. Regular bus is cheaper but ends at the terminal, so add a short tricycle ride after.</div>
+        <div class="desc">P2P drops off right at the McDonald's on Santa Rosa–Tagaytay Rd, corner Laguna Bel Air Dr — a short walk from home. Regular bus is cheaper but ends at the terminal, so add a short tricycle ride after.</div>
         <div class="chips"><span class="chip leg"></span><span class="chip cost">₱200+ P2P / ₱102 bus (₱82 disc.) + tricycle</span></div>
         <details class="optional-suggestion">
           <summary><span class="optional-badge">If normal bus</span> 🛺 Tricycle, terminal → Belair</summary>
@@ -825,6 +905,37 @@
       <button type="button" class="modal-confirm" id="gateContinue" style="flex:1;">Continue</button>
     </div>
     <div id="gateError" style="color:#a3282a;font-size:11.5px;margin-top:8px;display:none;font-family:'IBM Plex Mono',monospace;">Please enter a valid email.</div>
+  </div>
+</div>
+
+<div class="letter-overlay" id="letterOverlay">
+  <div class="letter-box">
+    <button type="button" class="letter-close" id="letterClose">✕</button>
+    <div class="letter-heart">✦ ✦ ✦</div>
+    <div class="letter-body">
+      <p>rissa,</p>
+      <p>i've been thinking about how i wanted to ask you this, and after everything we've shared, somehow the answer feels simple.</p>
+      <p>i want you.</p>
+      <p>not because i need someone to complete me, and not because i can't imagine a life without you. i want you because i genuinely like the life i'm building for myself, and i would love for you to be someone i get to experience it with.</p>
+      <p>i know the road that brought us here wasn't always easy. there were things i did and moments where i fell short of loving you in the way you needed to be loved. there were times when i let my own fears, pride, and way of thinking take up too much space, and you ended up being the one adjusting. i know that my intentions didn't always translate into actions, and that saying what i would do without consistently following through only made things harder for you.</p>
+      <p>i don't want to forget those things, because they taught me something about myself and about love that i don't think i could have learned any other way. i've taken responsibility for them, and i'm still learning from them. but i also don't want our story to stay there. what matters to me now is what we do with everything we've learned.</p>
+      <p>i love that we've already been finding our way forward since july. i love that we're getting to experience a version of us that feels more intentional, more open, and more grounded. we're not pretending that nothing happened. we're choosing to move forward while carrying what we've learned with us.</p>
+      <p>you once told me that love is a language that has to be shared, translated, and transcended. i believe i'm gradually learning how to speak yours, and how to translate it into our own language, our own little world. i know i'm still learning, but i genuinely want to keep learning you.</p>
+      <p>i want the ordinary things with you. the spontaneous adventures, the random conversations, the quiet days, the stupid jokes, the meals we decide on at the last minute, and all the little moments that eventually become memories.</p>
+      <p>i want to see you grow into the woman you want to become while i continue becoming the man i want to be. i want us to have our own dreams and our own lives, while still having someone beside us who says, "i've got you." i want to challenge your perspectives and have mine challenged too. i want to celebrate your wins, listen to your worries, and be there for the parts of life that aren't as easy.</p>
+      <p>i don't want to promise you that i'll always get everything right. i know better than to make promises just because they sound good. what i can tell you is that i want to keep showing you through the little things that i mean what i say. i want my actions to eventually make the words unnecessary.</p>
+      <p>i don't want to rush what we're building. i want to enjoy it. one day, one conversation, one adventure, one little gesture at a time.</p>
+      <p>and maybe that's why i don't want to ask you something as simple as "will you be my girlfriend?"</p>
+      <p>because what i'm really asking is something more personal.</p>
+      <p>may i be the person who gets to pursue you intentionally, learn you, support you, annoy you, laugh with you, grow with you, and make memories with you?</p>
+      <p>may i be someone you can come to when you have something exciting to tell me, when you need someone to listen, or when you simply want someone beside you?</p>
+      <p>i don't know exactly what every season ahead of us will look like. especially with everything that's coming for both of us. but i know that i want to experience those seasons with you, while still allowing us to become our own people along the way.</p>
+      <p>i believe what we have is worth choosing.</p>
+      <p>not because the past was perfect.</p>
+      <p>but because of what we've learned from it, what we've become because of it, and what i believe we can still build from here.</p>
+      <p>so, rissa,</p>
+      <p class="letter-signoff">may i be your boyfriend?</p>
+    </div>
   </div>
 </div>
 
@@ -926,6 +1037,7 @@
   // itinerary lock — once confirmed, saved to Firestore (cross-device) + a cookie (fast local cache)
   const lockBanner = document.getElementById('lockBanner');
   function applyLock(route, label, date){
+    currentLock = { route, label, date };
     lockBanner.style.display = 'block';
     lockBanner.textContent = `✓ Locked in: ${label} on ${date}. This can no longer be changed.`;
     document.querySelectorAll('.tab').forEach(t=>{
@@ -996,7 +1108,7 @@
 
   document.querySelectorAll('.select-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
-      if(getCookie('dateItinerary_lock') || btn.disabled) return; // already locked, ignore
+      if(getActiveLock() || btn.disabled) return; // already locked, ignore
       openDateModal(btn.dataset.selectRoute, btn.dataset.routeLabel);
     });
   });
@@ -1005,9 +1117,15 @@
   const stickyCtaBtn = document.getElementById('stickyCtaBtn');
   const routeLabels = { binondo: 'Binondo', gh: 'GH Mall', pobla: 'Poblacion' };
   let stickyRoute = 'binondo';
+  let currentLock = null; // in-memory fallback, so this still works even if the cookie write fails (e.g. file:// testing)
+  function getActiveLock(){
+    if(currentLock) return currentLock;
+    const cookieLock = getCookie('dateItinerary_lock');
+    return cookieLock ? JSON.parse(cookieLock) : null;
+  }
   function updateStickyCta(){
-    if(getCookie('dateItinerary_lock')){
-      const lock = JSON.parse(getCookie('dateItinerary_lock'));
+    const lock = getActiveLock();
+    if(lock){
       stickyCtaBtn.textContent = `✓ Locked in: ${lock.label}, ${lock.date}`;
       stickyCtaBtn.disabled = true;
     } else {
@@ -1016,7 +1134,7 @@
     }
   }
   stickyCtaBtn.addEventListener('click', ()=>{
-    if(getCookie('dateItinerary_lock')) return;
+    if(getActiveLock()) return;
     openDateModal(stickyRoute, routeLabels[stickyRoute]);
   });
   updateStickyCta();
@@ -1167,8 +1285,71 @@
     });
   }
 
+  // live location sharing — opt-in only, toggled by whoever's on this page.
+  // Writes to a shared Firestore doc so the read-only Poblacion page (e.g. for
+  // her parents) can show "last known location" without any tracking by default.
+  const locationDocRef = doc(db, 'sharedState', 'location');
+  const locationToggleBtn = document.getElementById('locationToggleBtn');
+  const locationToggleLabel = document.getElementById('locationToggleLabel');
+  let locationWatchId = null;
+  let sharingLocation = false;
+
+  function updateLocationBtnUI(){
+    locationToggleBtn.classList.toggle('active', sharingLocation);
+    locationToggleLabel.textContent = sharingLocation ? 'Sharing live location…' : 'Share live location';
+  }
+
+  function startSharingLocation(){
+    if(!navigator.geolocation){
+      alert('Geolocation isn\'t supported on this device/browser.');
+      return;
+    }
+    sharingLocation = true;
+    updateLocationBtnUI();
+    locationWatchId = navigator.geolocation.watchPosition(
+      pos=>{
+        const { latitude, longitude, accuracy } = pos.coords;
+        setDoc(locationDocRef, {
+          lat: latitude, lng: longitude, accuracy,
+          updatedAt: new Date().toISOString()
+        }).catch(err=>console.error('Location sync failed', err));
+      },
+      err=>{
+        console.error('Geolocation error', err);
+        alert('Couldn\'t get your location — check location permissions for this site.');
+        stopSharingLocation();
+      },
+      { enableHighAccuracy: true, maximumAge: 20000, timeout: 15000 }
+    );
+  }
+
+  function stopSharingLocation(){
+    sharingLocation = false;
+    if(locationWatchId !== null){
+      navigator.geolocation.clearWatch(locationWatchId);
+      locationWatchId = null;
+    }
+    updateLocationBtnUI();
+  }
+
+  locationToggleBtn.addEventListener('click', ()=>{
+    if(sharingLocation) stopSharingLocation();
+    else startSharingLocation();
+  });
+
   const checklistDocRef = doc(db, 'sharedState', 'checklist');
   let applyingRemoteChecklist = false;
+  let latestChecklistData = {};
+
+  // the letter unlocks at 1:00 PM Philippine time (UTC+8) — even if Saglit gets
+  // checked earlier, it won't reveal until the clock actually hits 1 PM.
+  function isPast1PMinPH(){
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Manila', hour12: false, hour: '2-digit'
+    }).formatToParts(new Date());
+    const hour = parseInt(parts.find(p => p.type === 'hour').value, 10);
+    return hour >= 13;
+  }
 
   function writeChecklistState(){
     const state = {};
@@ -1184,6 +1365,7 @@
     if(!snap.exists()) return;
     applyingRemoteChecklist = true;
     const data = snap.data();
+    latestChecklistData = data;
     document.querySelectorAll('.stub').forEach(stub=>{
       const id = stub.dataset.id;
       const c = stub.querySelector('.check');
@@ -1194,7 +1376,38 @@
     document.querySelectorAll('.route').forEach(updateCheckLocks);
     updateProgress();
     applyingRemoteChecklist = false;
+    maybeRevealLetter();
   }, err=>console.error('Checklist listener failed', err));
+
+  // the letter — reveals once, ever, but only once it's past 1 PM Philippine time
+  // AND the Saglit checkbox is done. Tracked in Firestore (not just a cookie) so it
+  // stays "shown" across devices/reloads.
+  const letterOverlay = document.getElementById('letterOverlay');
+  const letterClose = document.getElementById('letterClose');
+  const letterDocRef = doc(db, 'sharedState', 'letter');
+  let letterAlreadySeen = false;
+  getDoc(letterDocRef).then(snap=>{
+    letterAlreadySeen = snap.exists() && snap.data().seen === true;
+    maybeRevealLetter();
+  }).catch(err=>console.error('Letter state read failed', err));
+
+  function revealLetter(){
+    letterOverlay.classList.add('open');
+    letterAlreadySeen = true;
+    setDoc(letterDocRef, { seen: true, seenAt: new Date().toISOString() }).catch(err=>console.error('Letter state write failed', err));
+  }
+  function maybeRevealLetter(){
+    if(letterAlreadySeen) return;
+    if(latestChecklistData && latestChecklistData['p4'] && isPast1PMinPH()){
+      revealLetter();
+    }
+  }
+  // re-check every 20s so it still unlocks at 1 PM even if Saglit was checked earlier
+  // and nobody touches the page again until then.
+  setInterval(maybeRevealLetter, 20000);
+
+  letterClose.addEventListener('click', ()=> letterOverlay.classList.remove('open'));
+  letterOverlay.addEventListener('click', (e)=>{ if(e.target === letterOverlay) letterOverlay.classList.remove('open'); });
 
   document.querySelectorAll('.route').forEach(route=>{
     updateCheckLocks(route);
@@ -1203,6 +1416,7 @@
         if(applyingRemoteChecklist) return;
         const checks = [...route.querySelectorAll('.check')];
         const idx = checks.indexOf(c);
+        const stub = c.closest('.stub');
 
         if(c.classList.contains('locked')){
           c.classList.remove('shake');
@@ -1216,6 +1430,10 @@
           checks.slice(idx).forEach(later => later.classList.remove('done'));
         } else {
           c.classList.add('done');
+          if(stub && stub.dataset.id === 'p4'){
+            latestChecklistData = { ...latestChecklistData, p4: true };
+            maybeRevealLetter();
+          }
         }
 
         updateCheckLocks(route);
