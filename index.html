@@ -1309,10 +1309,10 @@
     locationWatchId = navigator.geolocation.watchPosition(
       pos=>{
         const { latitude, longitude, accuracy } = pos.coords;
+        const who = visitorEmail || 'unknown';
         setDoc(locationDocRef, {
-          lat: latitude, lng: longitude, accuracy,
-          updatedAt: new Date().toISOString()
-        }).catch(err=>console.error('Location sync failed', err));
+          [who]: { lat: latitude, lng: longitude, accuracy, updatedAt: new Date().toISOString() }
+        }, { merge: true }).catch(err=>console.error('Location sync failed', err));
       },
       err=>{
         console.error('Geolocation error', err);
