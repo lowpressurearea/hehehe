@@ -1316,10 +1316,18 @@
       },
       err=>{
         console.error('Geolocation error', err);
-        alert('Couldn\'t get your location — check location permissions for this site.');
+        let msg = 'Couldn\'t get your location.';
+        if(err.code === err.PERMISSION_DENIED){
+          msg = 'Location permission was denied for this site. On iPhone: Settings → Privacy & Security → Location Services → Safari Websites → set to "While Using the App". Then in Safari, tap the "aA" icon in the address bar → Website Settings → Location → Allow, and reload the page.';
+        } else if(err.code === err.POSITION_UNAVAILABLE){
+          msg = 'Your device couldn\'t determine a location right now — try again in a moment, ideally outdoors or near a window.';
+        } else if(err.code === err.TIMEOUT){
+          msg = 'Getting your location took too long — try again, ideally with a clearer GPS signal.';
+        }
+        alert(msg);
         stopSharingLocation();
       },
-      { enableHighAccuracy: true, maximumAge: 20000, timeout: 15000 }
+      { enableHighAccuracy: true, maximumAge: 20000, timeout: 25000 }
     );
   }
 
@@ -1341,14 +1349,20 @@
   let applyingRemoteChecklist = false;
   let latestChecklistData = {};
 
-  // the letter unlocks at 1:00 PM Philippine time (UTC+8) — even if Saglit gets
-  // checked earlier, it won't reveal until the clock actually hits 1 PM.
+  // the letter unlocks on Aug 22, 2026, 1:00 PM Philippine time (UTC+8) onwards —
+  // even if Saglit gets checked earlier, or on a different day, it won't reveal
+  // until that specific date/time.
   function isPast1PMinPH(){
-    const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'Asia/Manila', hour12: false, hour: '2-digit'
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Manila', hour12: false,
+      year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit'
     }).formatToParts(new Date());
-    const hour = parseInt(parts.find(p => p.type === 'hour').value, 10);
-    return hour >= 13;
+    const get = type => parts.find(p => p.type === type).value;
+    const dateStr = `${get('year')}-${get('month')}-${get('day')}`; // e.g. "2026-08-22"
+    const hour = parseInt(get('hour'), 10);
+    if(dateStr > '2026-08-22') return true;              // any time on/after the 23rd
+    if(dateStr < '2026-08-22') return false;              // before the 22nd
+    return hour >= 13;                                     // on the 22nd itself, needs 1PM+
   }
 
   function writeChecklistState(){
